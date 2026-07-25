@@ -1,0 +1,6 @@
+[
+  {
+    "id": "phase0-allow-all",
+    "content": "permit(principal, action, resource);"
+  }
+]

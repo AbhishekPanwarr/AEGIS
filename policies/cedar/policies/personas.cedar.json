@@ -1,0 +1,18 @@
+[
+  {
+    "id": "procurement-policy",
+    "content": "permit(principal, action in [Action::\"SendPayment\", Action::\"ReadInvoice\"], resource) when { principal.persona == \"procurement\" };"
+  },
+  {
+    "id": "treasury-policy",
+    "content": "permit(principal, action == Action::\"SendPayment\", resource) when { principal.persona == \"treasury\" };"
+  },
+  {
+    "id": "refunds-policy",
+    "content": "permit(principal, action == Action::\"SendPayment\", resource) when { principal.persona == \"refunds\" };"
+  },
+  {
+    "id": "collections-policy",
+    "content": "permit(principal, action == Action::\"SendPayment\", resource) when { principal.persona == \"collections\" };"
+  }
+]

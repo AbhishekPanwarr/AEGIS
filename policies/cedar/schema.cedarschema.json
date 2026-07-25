@@ -1,0 +1,35 @@
+{
+  "": {
+    "entityTypes": {
+      "Agent": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "persona": { "type": "String" },
+            "mandate_id": { "type": "String" }
+          }
+        }
+      },
+      "Counterparty": {
+        "shape": {
+          "type": "Record",
+          "attributes": {}
+        }
+      }
+    },
+    "actions": {
+      "SendPayment": {
+        "appliesTo": {
+          "principalTypes": ["Agent"],
+          "resourceTypes": ["Counterparty"]
+        }
+      },
+      "ReadInvoice": {
+        "appliesTo": {
+          "principalTypes": ["Agent"],
+          "resourceTypes": ["Counterparty"]
+        }
+      }
+    }
+  }
+}
