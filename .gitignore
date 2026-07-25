@@ -1,0 +1,15 @@
+# Binaries
+/mockrails
+/gateway
+/audit-chain
+
+# Go workspace build artifacts
+*.test
+*.out
+
+# Environment
+.env
+
+# OS files
+.DS_Store
+Thumbs.db

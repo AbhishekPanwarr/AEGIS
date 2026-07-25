@@ -1,0 +1,14 @@
+go 1.22
+
+use (
+	./pkg
+	./services/gateway
+	./services/audit-chain
+	./services/mock-rails
+	./services/identity-service
+	./services/budget-ledger
+	./services/containment-controller
+	./tests/golden
+	./tests/race
+	./tests/control
+)
