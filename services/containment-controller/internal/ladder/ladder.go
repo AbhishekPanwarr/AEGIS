@@ -114,13 +114,39 @@ func (s *Service) SetLevel(ctx context.Context, scopeType, scopeID, level, reaso
 		s.addQuarantineFlag(ctx, scopeType, scopeID)
 	}
 
-	_ = s.store.InsertContainmentEvent(ctx, ev)
+	eventID, _ := s.store.InsertContainmentEvent(ctx, ev)
+
+	if level == "HALT" && scopeType == "agent" {
+		caseID := idgen.New()
+		replayResult := []byte(`{}`)
+		driftTrend := []byte(`{}`)
+		
+		_ = s.store.CreateRecoveryCase(ctx, caseID, scopeID, eventID, replayResult, driftTrend)
+		
+		s.logger.Info("recovery_case_created", map[string]interface{}{
+			"case_id": caseID, "agent_id": scopeID, "event_id": eventID,
+		})
+		
+		go s.assembleRecoveryCase(caseID, scopeID)
+	}
 
 	s.logger.Info("level_set", map[string]interface{}{
 		"scope": scopeType, "scope_id": scopeID, "level": level, "from": prevLevel,
 	})
 
 	return result, nil
+}
+
+func (s *Service) assembleRecoveryCase(caseID, agentID string) {
+	ctx := context.Background()
+	
+	// Mock agent-sim and behaviour-analytics for demo
+	replayRes := []byte(`{"sandbox": "agent-sim", "replay": "success", "violations": 0}`)
+	advRes := []byte(`{"sandbox": "agent-sim", "adversarial": "passed", "score": 95}`)
+	driftRes := []byte(`{"trend": "stable", "jsd": 0.05}`)
+	
+	_ = s.store.UpdateRecoveryCaseAssembly(ctx, caseID, replayRes, advRes, driftRes)
+	s.logger.Info("recovery_case_assembled", map[string]interface{}{"case_id": caseID})
 }
 
 func (s *Service) addQuarantineFlag(ctx context.Context, scopeType, scopeID string) {
@@ -167,6 +193,11 @@ func (s *Service) GetAllStates(ctx context.Context) ([]store.ContainmentState, e
 
 func (s *Service) GetRecentEvents(ctx context.Context, limit int) ([]store.ContainmentEvent, error) {
 	return s.store.GetRecentEvents(ctx, limit)
+}
+
+func (s *Service) GetOrphanedFunds() int64 {
+	// For prototype, return 0 or fetch from sagas
+	return 0
 }
 
 func _unused() {

@@ -102,12 +102,13 @@ type ContainmentEvent struct {
 	CreatedAt     string `json:"created_at"`
 }
 
-func (s *Store) InsertContainmentEvent(ctx context.Context, ev ContainmentEvent) error {
-	_, err := s.pool.Exec(ctx, `
+func (s *Store) InsertContainmentEvent(ctx context.Context, ev ContainmentEvent) (int64, error) {
+	var id int64
+	err := s.pool.QueryRow(ctx, `
 		INSERT INTO containment_events (scope_type, scope_id, from_level, to_level, reason, actor, epoch_bumped_to)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, ev.ScopeType, ev.ScopeID, ev.FromLevel, ev.ToLevel, ev.Reason, ev.Actor, ev.EpochBumpedTo)
-	return err
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+	`, ev.ScopeType, ev.ScopeID, ev.FromLevel, ev.ToLevel, ev.Reason, ev.Actor, ev.EpochBumpedTo).Scan(&id)
+	return id, err
 }
 
 func (s *Store) GetRecentEvents(ctx context.Context, limit int) ([]ContainmentEvent, error) {
@@ -270,13 +271,71 @@ func (s *Store) DecideApproval(ctx context.Context, id, decision, approver, rati
 	return err
 }
 
-// --- recovery_cases (stub for Phase 2) ---
+// --- recovery_cases ---
 
-func (s *Store) CreateRecoveryCase(ctx context.Context, id, agentID string, haltEventID int64) error {
+type RecoveryCase struct {
+	ID               string          `json:"id"`
+	AgentID          string          `json:"agent_id"`
+	HaltEventID      *int64          `json:"halt_event_id,omitempty"`
+	ReplayResult     json.RawMessage `json:"replay_result,omitempty"`
+	AdversarialResult json.RawMessage `json:"adversarial_result,omitempty"`
+	DriftTrend       json.RawMessage `json:"drift_trend,omitempty"`
+	Status           string          `json:"status"`
+	Approver1        *string         `json:"approver_1,omitempty"`
+	Approver1At      *string         `json:"approver_1_at,omitempty"`
+	Approver2        *string         `json:"approver_2,omitempty"`
+	Approver2At      *string         `json:"approver_2_at,omitempty"`
+}
+
+func (s *Store) CreateRecoveryCase(ctx context.Context, id, agentID string, haltEventID int64, replayResult, driftTrend json.RawMessage) error {
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO recovery_cases (id, agent_id, halt_event_id, status)
-		VALUES ($1, $2, $3, 'PENDING')
-	`, id, agentID, haltEventID)
+		INSERT INTO recovery_cases (id, agent_id, halt_event_id, status, replay_result, drift_trend)
+		VALUES ($1, $2, $3, 'READY', $4, $5)
+	`, id, agentID, haltEventID, replayResult, driftTrend)
+	return err
+}
+
+func (s *Store) GetRecoveryCase(ctx context.Context, id string) (*RecoveryCase, error) {
+	var rc RecoveryCase
+	var haltEventID *int64
+	var app1, app1At, app2, app2At *string
+	err := s.pool.QueryRow(ctx, `
+		SELECT id, agent_id::text, halt_event_id, COALESCE(replay_result, '{}'::jsonb), COALESCE(adversarial_result, '{}'::jsonb), COALESCE(drift_trend, '{}'::jsonb), status, approver_1, approver_1_at::text, approver_2, approver_2_at::text
+		FROM recovery_cases WHERE id = $1
+	`, id).Scan(&rc.ID, &rc.AgentID, &haltEventID, &rc.ReplayResult, &rc.AdversarialResult, &rc.DriftTrend, &rc.Status, &app1, &app1At, &app2, &app2At)
+	if err != nil {
+		return nil, err
+	}
+	rc.HaltEventID = haltEventID
+	rc.Approver1 = app1
+	rc.Approver1At = app1At
+	rc.Approver2 = app2
+	rc.Approver2At = app2At
+	return &rc, nil
+}
+
+func (s *Store) UpdateRecoveryCaseAssembly(ctx context.Context, id string, replayResult, advResult, driftTrend json.RawMessage) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE recovery_cases 
+		SET replay_result = $2, adversarial_result = $3, drift_trend = $4, status = 'READY'
+		WHERE id = $1
+	`, id, replayResult, advResult, driftTrend)
+	return err
+}
+
+func (s *Store) UpdateRecoveryCaseApprover1(ctx context.Context, id, approver string) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE recovery_cases SET approver_1 = $2, approver_1_at = now()
+		WHERE id = $1 AND approver_1 IS NULL
+	`, id, approver)
+	return err
+}
+
+func (s *Store) UpdateRecoveryCaseApprover2(ctx context.Context, id, approver string) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE recovery_cases SET approver_2 = $2, approver_2_at = now(), status = 'APPROVED'
+		WHERE id = $1 AND approver_1 IS NOT NULL AND approver_2 IS NULL
+	`, id, approver)
 	return err
 }
 

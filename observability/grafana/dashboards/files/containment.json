@@ -1,0 +1,10 @@
+{
+  "title": "Containment Overrides",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HALT Events",
+      "targets": [{"expr": "rate(containment_halts_total[5m])"}]
+    }
+  ]
+}

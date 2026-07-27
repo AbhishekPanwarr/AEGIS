@@ -1,0 +1,281 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-color: #121212;
+  --bg-panel: #1a1a1a;
+  --bg-panel-hover: #222222;
+  
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-accent: #34d399; /* the krellix green */
+  
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(52, 211, 153, 0.3);
+  
+  --observe: #34d399;
+  --throttle: #fbbf24;
+  --quarantine: #f97316;
+  --halt: #ef4444;
+
+  --font-body: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  color-scheme: dark; /* Force native inputs to dark mode */
+  /* subtle grid background like in the inspo */
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center top;
+}
+
+/* Krellix App Window Style */
+.app-window {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.app-window::before {
+  content: '';
+  display: block;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* MacOS dots inside the window header */
+.app-window::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff5f56;
+  box-shadow: 16px 0 0 #ffbd2e, 32px 0 0 #27c93f;
+}
+
+.glass-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+}
+
+/* Top Navigation */
+.nav-container {
+  display: flex;
+  gap: 12px;
+  padding: 24px 32px;
+  background: transparent;
+  align-items: center;
+}
+
+.nav-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.05);
+}
+
+.nav-btn.active {
+  color: var(--text-primary);
+  background: #fff;
+  color: #000; /* Krellix active pill style */
+}
+
+/* Layout */
+.page-container {
+  padding: 0 32px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Typography */
+.page-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-accent);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-color), transparent);
+}
+
+/* Animations */
+@keyframes slideUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: var(--text-accent); }
+}
+
+.typing-effect {
+  overflow: hidden;
+  border-right: 2px solid var(--text-accent);
+  white-space: nowrap;
+  animation: 
+    typing 1.5s steps(30, end),
+    blink-caret .75s step-end infinite;
+  display: inline-block;
+  padding-right: 4px;
+}
+
+/* Badges */
+.badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.2);
+}
+.badge-observe { color: var(--observe); }
+.badge-throttle { color: var(--throttle); }
+.badge-quarantine { color: var(--quarantine); }
+.badge-halt { 
+  color: var(--halt); 
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: inset 0 0 10px rgba(239,68,68,0.1);
+}
+
+/* Grid & Cards */
+.grid-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 16px;
+}
+
+.agent-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.agent-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agent-meta {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+/* Inputs & Buttons */
+input, select {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  color-scheme: dark;
+}
+
+input:focus, select:focus {
+  border-color: var(--text-accent) !important;
+  box-shadow: 0 0 0 1px var(--text-accent);
+}
+
+.btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn:hover {
+  background: var(--bg-panel-hover);
+  border-color: rgba(255,255,255,0.2);
+}
+.btn-primary {
+  background: var(--text-accent);
+  color: #000;
+  border: none;
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: #10b981;
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.4);
+}
+.btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}

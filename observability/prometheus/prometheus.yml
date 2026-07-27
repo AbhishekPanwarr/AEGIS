@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: 'aegis-gateway'
+    static_configs:
+      - targets: ['gateway:8080']
+  - job_name: 'aegis-containment'
+    static_configs:
+      - targets: ['containment-controller:8083']
+  - job_name: 'aegis-analytics'
+    static_configs:
+      - targets: ['behavior-analytics:8085']

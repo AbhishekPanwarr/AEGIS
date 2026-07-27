@@ -32,21 +32,18 @@ export function FleetMap() {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) return <div style={{ padding: '24px' }}>Loading...</div>;
+  if (loading) return <div className="page-container">Loading...</div>;
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h1 style={{ marginBottom: '16px' }}>Fleet Map</h1>
-      <div style={{ display: 'grid', gap: '8px' }}>
+    <div className="page-container">
+      <h1 className="page-title"><span className="typing-effect">Fleet_Map</span></h1>
+      <div className="grid-list">
         {agents.map(a => (
-          <div key={a.id} style={{
-            background: '#1e293b', padding: '12px 16px', borderRadius: '8px',
-            display: 'flex', alignItems: 'center', gap: '12px',
-          }}>
+          <div key={a.id} className="glass-panel agent-card">
             <Badge level={levels[a.id] || 'OBSERVE'} />
-            <span style={{ fontWeight: 600 }}>{a.persona}</span>
-            <span style={{ color: '#64748b', fontSize: '12px' }}>{a.id}</span>
-            <span style={{ color: '#64748b', fontSize: '12px' }}>group: {a.group_id.slice(0, 8)}...</span>
+            <span className="agent-name">{a.persona}</span>
+            <span className="agent-meta">{a.id}</span>
+            <span className="agent-meta">group: {a.group_id.slice(0, 8)}...</span>
           </div>
         ))}
         {agents.length === 0 && <div style={{ color: '#64748b' }}>No agents found. Run make seed.</div>}

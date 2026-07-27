@@ -1,0 +1,10 @@
+{
+  "title": "Budget Velocity & Exceptions",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Velocity Caps Exceeded",
+      "targets": [{"expr": "rate(budget_velocity_exceptions_total[5m])"}]
+    }
+  ]
+}

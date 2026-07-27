@@ -23,37 +23,29 @@ export function Approvals() {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h1 style={{ marginBottom: '16px' }}>Approvals</h1>
-      <div style={{ display: 'grid', gap: '8px' }}>
+    <div className="page-container">
+      <h1 className="page-title"><span className="typing-effect">Pending_Approvals</span></h1>
+      <div className="grid-list">
         {approvals.map(a => {
           const ctx = a.decision_context || {};
           return (
-            <div key={a.id} style={{
-              background: '#1e293b', padding: '12px 16px', borderRadius: '8px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <strong>{ctx.action_type || 'unknown'}</strong>
-                <span style={{ color: '#64748b', fontSize: '12px' }}>{a.id.slice(0, 8)}...</span>
-                <span style={{ color: '#64748b', fontSize: '12px' }}>agent: {a.agent_id.slice(0, 8)}...</span>
+            <div key={a.id} className="glass-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <strong style={{ fontSize: '16px', color: '#fff' }}>{ctx.action_type || 'unknown'}</strong>
+                <span className="agent-meta">{a.id.slice(0, 8)}...</span>
+                <span className="badge badge-observe">agent: {a.agent_id.slice(0, 8)}...</span>
               </div>
-              <div style={{ marginTop: '4px', fontSize: '13px', color: '#94a3b8' }}>
-                counterparty: {ctx.counterparty_id} | amount: {ctx.amount_minor}
+              <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                Counterparty: <strong style={{ color: '#fff' }}>{ctx.counterparty_id}</strong> &bull; Amount: <strong style={{ color: '#fff' }}>{ctx.amount_minor}</strong>
               </div>
-              <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                <button onClick={() => handleDecide(a.id, 'APPROVED')} style={{
-                  background: '#22c55e', color: '#fff', border: 'none',
-                  padding: '4px 12px', borderRadius: '4px', cursor: 'pointer',
-                }}>Approve</button>
-                <button onClick={() => handleDecide(a.id, 'DENIED')} style={{
-                  background: '#ef4444', color: '#fff', border: 'none',
-                  padding: '4px 12px', borderRadius: '4px', cursor: 'pointer',
-                }}>Deny</button>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                <button onClick={() => handleDecide(a.id, 'APPROVED')} className="btn btn-primary" style={{ flex: 1 }}>Approve</button>
+                <button onClick={() => handleDecide(a.id, 'DENIED')} className="btn btn-danger" style={{ flex: 1 }}>Deny</button>
               </div>
             </div>
           );
         })}
-        {approvals.length === 0 && <div style={{ color: '#64748b' }}>No pending approvals.</div>}
+        {approvals.length === 0 && <div className="agent-meta" style={{ textAlign: 'center', padding: '32px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>No pending approvals. System running autonomously.</div>}
       </div>
     </div>
   );

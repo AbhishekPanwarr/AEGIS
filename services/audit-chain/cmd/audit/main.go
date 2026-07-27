@@ -32,6 +32,10 @@ func main() {
 
 	mux.HandleFunc("POST /v1/decisions", s.HandleCreateDecision)
 	mux.HandleFunc("PATCH /v1/decisions/{id}/finalize", s.HandleFinalize)
+	mux.HandleFunc("GET /v1/decisions", s.HandleGetDecisions)
+	mux.HandleFunc("POST /v1/verify-chain", s.HandleVerifyChain)
+	mux.HandleFunc("POST /v1/replay/{id}", s.HandleReplay)
+	mux.HandleFunc("POST /v1/checkpoint", s.HandleCheckpoint)
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)

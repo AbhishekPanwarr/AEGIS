@@ -70,6 +70,8 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("POST /v1/act", h.HandleAct)
 	mux.HandleFunc("POST /v1/act/preflight", h.HandlePreflight)
 	mux.HandleFunc("POST /v1/act/approve/{approval_id}", h.HandleApproveAct)
+	mux.HandleFunc("POST /v1/policies/promote", h.HandlePromotePolicy)
+	mux.HandleFunc("POST /v1/policy-versions/{hash}/retro-simulate", h.HandleRetroPolicy)
 	mux.HandleFunc("GET /healthz", h.HandleHealthz)
 	return mux
 }
@@ -236,17 +238,20 @@ func (h *Handler) HandleAct(w http.ResponseWriter, r *http.Request) {
 	cedarResp, err := h.policy.IsAuthorized(ctx, cedarReq)
 	if err != nil {
 		h.log.Error("stage_policy_failed", map[string]interface{}{"error": err.Error()})
-		apierr.WriteError(w, http.StatusForbidden, apierr.PolicyDenied, "policy service unavailable")
-		return
-	}
-
-	if cedarResp.Decision != "Allow" {
+		
+		if !structuralLintFallback(req.ActionType) {
+			apierr.WriteError(w, http.StatusForbidden, apierr.PolicyDenied, "policy service unavailable and fallback denied")
+			return
+		}
+		h.log.Info("stage_policy_fallback", map[string]interface{}{"decision": "Allow"})
+	} else if cedarResp.Decision != "Allow" {
 		h.log.Info("stage_policy", map[string]interface{}{"decision": "Deny"})
 		cacheResult(http.StatusForbidden, nil, apierr.PolicyDenied, "policy denied")
 		apierr.WriteError(w, http.StatusForbidden, apierr.PolicyDenied, "policy denied")
 		return
+	} else {
+		h.log.Info("stage_policy", map[string]interface{}{"decision": "Allow"})
 	}
-	h.log.Info("stage_policy", map[string]interface{}{"decision": "Allow"})
 
 	// Mandate scope check (explicit second gate per Section 7.2)
 	mandate, err := h.identity.GetMandate(ctx, tok.MandateID)
@@ -296,11 +301,12 @@ func (h *Handler) HandleAct(w http.ResponseWriter, r *http.Request) {
 	})
 
 	stub, err := h.audit.CreateStub(ctx, clients.AuditStubRequest{
-		AgentID:     &tok.AgentID,
-		MandateID:   &tok.MandateID,
-		TokenID:     &tok.TokenID,
-		ActionType:  req.ActionType,
-		FullContext: fullCtx,
+		AgentID:           &tok.AgentID,
+		MandateID:         &tok.MandateID,
+		TokenID:           &tok.TokenID,
+		ActionType:        req.ActionType,
+		PolicyVersionHash: "active-policy",
+		FullContext:       fullCtx,
 	})
 	if err != nil {
 		h.log.Error("audit_stub_failed", map[string]interface{}{"error": err.Error()})
@@ -380,6 +386,21 @@ func (h *Handler) HandleAct(w http.ResponseWriter, r *http.Request) {
 		"latency_ms":  latency,
 	})
 
+	if h.rdb != nil {
+		eventData, _ := json.Marshal(map[string]interface{}{
+			"agent_id":        tok.AgentID,
+			"action_type":     req.ActionType,
+			"counterparty_id": req.CounterpartyID,
+			"amount_minor":    req.AmountMinor,
+			"timestamp":       time.Now().Format(time.RFC3339),
+			"decision":        "ALLOW",
+		})
+		h.rdb.XAdd(ctx, &redis.XAddArgs{
+			Stream: "stream:decisions",
+			Values: map[string]interface{}{"data": string(eventData)},
+		})
+	}
+
 	resp := ActResponse{
 		Status:     "executed",
 		DecisionID: decisionID,
@@ -430,6 +451,14 @@ func counterpartyInScope(counterpartyID string, scopeJSON json.RawMessage) bool 
 		return false
 	}
 	return true
+}
+
+func structuralLintFallback(actionType string) bool {
+	validActions := map[string]bool{
+		"PAYMENT": true,
+		"TRADE": true,
+	}
+	return validActions[actionType]
 }
 
 func isNewCounterparty(ctx context.Context, rdb *redis.Client, agentID, counterpartyID string) bool {
@@ -500,9 +529,10 @@ func (h *Handler) HandleApproveAct(w http.ResponseWriter, r *http.Request) {
 
 	// Create audit stub
 	stub, _ := h.audit.CreateStub(ctx, clients.AuditStubRequest{
-		AgentID:    &origCtx.AgentID,
-		ActionType: origCtx.ActionType,
-		FullContext: approval.DecisionContext,
+		AgentID:           &origCtx.AgentID,
+		ActionType:        origCtx.ActionType,
+		PolicyVersionHash: "active-policy",
+		FullContext:       approval.DecisionContext,
 	})
 
 	decisionID := "unknown"

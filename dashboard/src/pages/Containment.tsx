@@ -35,64 +35,55 @@ export function Containment() {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h1 style={{ marginBottom: '16px' }}>Containment</h1>
+    <div className="page-container">
+      <h1 className="page-title"><span className="typing-effect">Containment_Protocol</span></h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         <div>
-          <h2 style={{ marginBottom: '12px' }}>Current States</h2>
-          <div style={{ display: 'grid', gap: '6px' }}>
+          <h2 style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>Current States</h2>
+          <div className="grid-list">
             {states.map(s => (
-              <div key={`${s.scope_type}:${s.scope_id}`} style={{
-                background: '#1e293b', padding: '8px 12px', borderRadius: '6px',
-                display: 'flex', alignItems: 'center', gap: '8px',
-              }}>
+              <div key={`${s.scope_type}:${s.scope_id}`} className="glass-panel agent-card">
                 <Badge level={s.level} />
-                <span>{s.scope_type}:{s.scope_id.slice(0, 12)}</span>
-                <span style={{ color: '#64748b', fontSize: '12px' }}>by {s.actor}</span>
+                <span className="agent-name">{s.scope_type}:{s.scope_id.slice(0, 12)}</span>
+                <span className="agent-meta">by {s.actor}</span>
               </div>
             ))}
-            {states.length === 0 && <div style={{ color: '#64748b' }}>No states. Run make seed.</div>}
+            {states.length === 0 && <div className="agent-meta">No states. Run make seed.</div>}
           </div>
         </div>
 
         <div>
-          <h2 style={{ marginBottom: '12px' }}>Recent Events</h2>
-          <div style={{ display: 'grid', gap: '4px', maxHeight: '300px', overflowY: 'auto' }}>
+          <h2 style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>Recent Events</h2>
+          <div className="grid-list" style={{ maxHeight: '400px', overflowY: 'auto' }}>
             {events.map(e => (
-              <div key={e.id} style={{
-                background: '#1e293b', padding: '6px 12px', borderRadius: '4px',
-                fontSize: '12px',
-              }}>
+              <div key={e.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Badge level={e.to_level} />
-                <span style={{ marginLeft: '8px' }}>{e.scope_type}:{e.scope_id.slice(0, 12)}</span>
-                <span style={{ color: '#64748b' }}> by {e.actor}</span>
+                <span className="agent-name">{e.scope_type}:{e.scope_id.slice(0, 12)}</span>
+                <span className="agent-meta">by {e.actor}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: '24px', background: '#1e293b', padding: '16px', borderRadius: '8px' }}>
-        <h2 style={{ marginBottom: '12px' }}>Change Level</h2>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <select value={form.scopeType} onChange={e => setForm({ ...form, scopeType: e.target.value })}>
+      <div className="glass-panel" style={{ marginTop: '32px', padding: '24px' }}>
+        <h2 style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>Change Level</h2>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <select value={form.scopeType} onChange={e => setForm({ ...form, scopeType: e.target.value })} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}>
             <option value="fleet">fleet</option>
             <option value="group">group</option>
             <option value="agent">agent</option>
           </select>
-          <input placeholder="scope ID" value={form.scopeId} onChange={e => setForm({ ...form, scopeId: e.target.value })} style={{ width: '200px' }} />
-          <select value={form.level} onChange={e => setForm({ ...form, level: e.target.value })}>
+          <input placeholder="scope ID" value={form.scopeId} onChange={e => setForm({ ...form, scopeId: e.target.value })} style={{ width: '250px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }} />
+          <select value={form.level} onChange={e => setForm({ ...form, level: e.target.value })} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}>
             <option value="OBSERVE">OBSERVE</option>
             <option value="THROTTLE">THROTTLE</option>
             <option value="QUARANTINE">QUARANTINE</option>
             <option value="HALT">HALT</option>
           </select>
-          <input placeholder="reason" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} style={{ width: '150px' }} />
-          <button onClick={handleSetLevel} style={{
-            background: '#3b82f6', color: '#fff', border: 'none',
-            padding: '4px 16px', borderRadius: '4px', cursor: 'pointer',
-          }}>Set Level</button>
+          <input placeholder="reason" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} style={{ width: '200px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }} />
+          <button onClick={handleSetLevel} className="btn btn-primary">Set Level</button>
         </div>
       </div>
     </div>

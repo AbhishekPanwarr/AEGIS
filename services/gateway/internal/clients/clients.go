@@ -302,11 +302,12 @@ func NewAuditClient(baseURL string) *AuditClient {
 }
 
 type AuditStubRequest struct {
-	AgentID     *string         `json:"agent_id"`
-	MandateID   *string         `json:"mandate_id"`
-	TokenID     *string         `json:"token_id"`
-	ActionType  string          `json:"action_type"`
-	FullContext json.RawMessage `json:"full_context"`
+	AgentID           *string         `json:"agent_id"`
+	MandateID         *string         `json:"mandate_id"`
+	TokenID           *string         `json:"token_id"`
+	ActionType        string          `json:"action_type"`
+	PolicyVersionHash string          `json:"policy_version_hash"`
+	FullContext       json.RawMessage `json:"full_context"`
 }
 
 type AuditStubResponse struct {

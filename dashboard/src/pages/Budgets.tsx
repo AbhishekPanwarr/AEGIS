@@ -34,44 +34,39 @@ export function Budgets() {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <h1 style={{ marginBottom: '16px' }}>Budgets</h1>
-      <div style={{ display: 'grid', gap: '8px' }}>
+    <div className="page-container">
+      <h1 className="page-title"><span className="typing-effect">Hierarchical_Budgets</span></h1>
+      <div className="grid-list">
         {nodes.map(n => {
           const u = usages[n.id];
           return (
-            <div key={n.id} style={{
-              background: '#1e293b', padding: '12px 16px', borderRadius: '8px',
-            }}>
+            <div key={n.id} className="glass-panel" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <strong>{n.label}</strong>
-                <span style={{ color: '#64748b', fontSize: '12px' }}>{n.id.slice(0, 8)}...</span>
+                <strong style={{ fontSize: '18px', color: '#fff' }}>{n.label}</strong>
+                <span className="agent-meta">{n.id.slice(0, 8)}...</span>
               </div>
               {u && (
-                <div style={{ marginTop: '8px', fontSize: '13px', color: '#94a3b8' }}>
-                  cap: {u.cap_minor.toLocaleString()} |
-                  committed: {u.committed_minor.toLocaleString()} |
-                  reserved: {u.reserved_minor.toLocaleString()} |
-                  headroom: <span style={{ color: u.headroom_minor > 0 ? '#22c55e' : '#ef4444' }}>{u.headroom_minor.toLocaleString()}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Cap</span><strong style={{ color: '#fff', fontSize: '18px', fontFamily: 'var(--font-mono)' }}>${u.cap_minor.toLocaleString()}</strong></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Committed</span><strong style={{ color: '#fff', fontSize: '18px', fontFamily: 'var(--font-mono)' }}>${u.committed_minor.toLocaleString()}</strong></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Reserved</span><strong style={{ color: '#fff', fontSize: '18px', fontFamily: 'var(--font-mono)' }}>${u.reserved_minor.toLocaleString()}</strong></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}><span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Headroom</span><strong style={{ color: u.headroom_minor > 0 ? 'var(--text-accent)' : 'var(--halt)', fontSize: '18px', fontFamily: 'var(--font-mono)' }}>${u.headroom_minor.toLocaleString()}</strong></div>
                 </div>
               )}
-              <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <input
                   type="number"
                   placeholder="new cap"
                   value={editCap[n.id] || ''}
                   onChange={e => setEditCap({ ...editCap, [n.id]: e.target.value })}
-                  style={{ width: '120px', padding: '4px 8px', background: '#0f172a', border: '1px solid #334155', borderRadius: '4px', color: '#e2e8f0' }}
+                  style={{ width: '160px', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}
                 />
-                <button onClick={() => handleUpdateCap(n.id)} style={{
-                  background: '#3b82f6', color: '#fff', border: 'none',
-                  padding: '4px 12px', borderRadius: '4px', cursor: 'pointer',
-                }}>Update</button>
+                <button onClick={() => handleUpdateCap(n.id)} className="btn btn-primary">Update Cap</button>
               </div>
             </div>
           );
         })}
-        {nodes.length === 0 && <div style={{ color: '#64748b' }}>No budget nodes found. Run make seed.</div>}
+        {nodes.length === 0 && <div className="agent-meta" style={{ textAlign: 'center', padding: '32px' }}>No budget nodes found. Run make seed.</div>}
       </div>
     </div>
   );
