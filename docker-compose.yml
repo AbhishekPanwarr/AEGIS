@@ -159,6 +159,7 @@ services:
       - BUDGET_ADDR=http://budget-ledger:8082
       - CONTAINMENT_ADDR=http://containment-controller:8083
       - REDIS_ADDR=redis:6379
+      - POSTGRES_DSN=postgres://aegis:aegis@postgres:5432/aegis
       - EPOCH_STALENESS_BOUND_SECONDS=2
     depends_on:
       mock-rails:
@@ -207,6 +208,53 @@ services:
       gateway:
         condition: service_healthy
     restart: "no"
+
+  behavior-analytics:
+    build:
+      context: analytics/behavior-analytics
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - POSTGRES_DSN=postgres://aegis:aegis@postgres:5432/aegis
+      - CONTAINMENT_ADDR=http://containment-controller:8083
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8085/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  cedar-agent-shadow:
+    image: permitio/cedar-agent:latest
+    ports:
+      - "8181:8180"
+    volumes:
+      - ./policies/cedar:/policies
+    environment:
+      - CEDAR_AGENT_ADDR=0.0.0.0
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./observability/grafana/dashboards/files:/etc/grafana/provisioning/dashboards/files
 
 volumes:
   identity-keys:

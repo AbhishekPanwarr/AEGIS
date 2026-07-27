@@ -12,15 +12,7 @@ const colors: Record<string, string> = {
 export function Badge({ level }: BadgeProps) {
   const color = colors[level] || '#6b7280';
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '2px 10px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      fontWeight: 600,
-      color: '#fff',
-      background: color,
-    }}>
+    <span className={`badge badge-${level.toLowerCase()}`}>
       {level}
     </span>
   );

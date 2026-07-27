@@ -1,0 +1,10 @@
+{
+  "title": "Audit Chain Health",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Chain Verifications",
+      "targets": [{"expr": "rate(audit_chain_verifications_total[5m])"}]
+    }
+  ]
+}

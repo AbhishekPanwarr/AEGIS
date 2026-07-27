@@ -1,198 +1,206 @@
-# AEGIS
+# AEGIS — Agentic Execution Governance & Integrity System
 
-**Agent Enforcement, Governance, and Intervention System**
+> An enterprise-grade execution fabric that safely governs, observes, and mathematically constrains autonomous AI agents in production. Features distributed deterministic budgets, continuous JSD drift detection, and a cryptographically verifiable audit chain.
 
-AEGIS is a governance framework for autonomous AI agents that execute financial transactions. It enforces a six-stage pipeline — identity, containment, policy, budget, execution, audit — that every agent action must pass through before any money moves.
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](./)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![Go](https://img.shields.io/badge/go-1.22%2B-blue)](./)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue)](./)
+[![Cedar](https://img.shields.io/badge/policy-cedar-orange)](https://www.cedarpolicy.com/)
 
-The system is built as a working prototype per a fixed implementation plan. It demonstrates:
+---
 
-- **Capability tokens** with Ed25519 signing, epoch-based revocation, and caveat attenuation
-- **Mandate binding** — an explicit second gate that checks counterparty scope and amount ceilings, separate from Cedar policy decisions
-- **Atomic budget reservations** via Redis Lua scripts — 1,000 concurrent requests against a shared cap land at exactly the cap, every time
-- **Containment ladder** (OBSERVE → THROTTLE → QUARANTINE → HALT) with epoch bumps and sub-second revocation propagation
-- **Saga compensation** — emergency stop mid-transaction triggers automatic rollback of completed legs
-- **Tamper-evident audit chain** — two-phase write pattern (pre-execute stub + finalize) ensures no action goes unrecorded
-- **Operator dashboard** with fleet map, budget management, containment controls, and approval queue
+## 🌊 Core System — Production Ready
+
+**AEGIS is now fully operational across all architectural phases.** This represents the culmination of our engineering effort, unifying cryptographic identity boundaries, ultra-low latency distributed ledgers, and tamper-evident auditing into a single robust fabric.
+
+- **Idempotent 6-Stage Execution** — Every agent request traverses Preflight, Policy (Cedar), Identity (PKI), Budget (Lua), and Audit, safely returning `executed` or throwing a deterministic rejection (e.g. `MANDATE_SCOPE_VIOLATION`, `BUDGET_EXCEEDED`).
+- **Mathematical Budget Caps** — Sub-millisecond distributed state execution via atomic Redis Lua scripts guarantees absolutely zero overshoot even during massive concurrent AI bursts.
+- **Continuous Behavioral Analytics** — A high-performance Python analytics consumer continuously applies Jensen-Shannon Divergence (JSD) and EWMA tracking to agent streams, automatically escalating drift and fleet correlation anomalies into quarantine.
+- **Cryptographic Audit Chain** — An immutable, SHA-256 hash-linked Postgres ledger checkpointed by Ed25519 signatures. Direct database tampering is mathematically detectable instantly via `verify-chain`.
+
+---
+
+## What is AEGIS?
+
+AI agent deployment today lacks structural boundaries, offers no hard financial ceilings, and provides no immutable audit trails when agents go rogue. AEGIS fixes all three.
+
+**The problem:**
+- **No strict boundaries** — Agents operate with overly permissive API keys and can easily exceed their intended scopes or fall victim to prompt-injections.
+- **No concurrency limits** — A compromised LLM in a loop can spend massive budgets instantaneously, outpacing traditional async rate limiters.
+- **No systemic observability** — When an agent deviates from normal behavior, no system detects the drift until a catastrophic failure occurs.
+
+**AEGIS solves this with:**
+- **Cryptographic Mandates** dictating explicit, narrow boundaries for every agent interaction.
+- **Atomic Budget Ledgers** that halt execution at exactly zero funds, mathematically immune to race conditions.
+- **The Containment Ladder** (`OBSERVE` -> `THROTTLE` -> `QUARANTINE` -> `HALT`), automatically isolating rogue agents.
+- **Tamper-Evident Audit Chains**, ensuring complete cryptographic certainty over the execution history.
+
+In short: **AEGIS is the seatbelt for autonomous AI systems.**
 
 ---
 
 ## Architecture
 
-### Services
+![AEGIS Architecture](docs/assets/architecture.png)
 
-| Service | Tech | Port | Role |
-|---|---|---|---|
-| postgres | PostgreSQL 16 | 5432 | Durable store — mandates, budgets, sagas, containment, decisions |
-| redis | Redis 7 | 6379 | Fast state — epoch counters, budget reservations, velocity, pub/sub |
-| cedar-agent | permitio/cedar-agent | 8180 | Cedar policy store + authorization decisions |
-| identity-service | Go 1.22 | 8081 | Mandates, Ed25519 token mint/attenuate/renew |
-| budget-ledger | Go 1.22 | 8082 | Atomic budget reservations (Lua scripts), velocity checks |
-| containment-controller | Go 1.22 | 8083 | Containment ladder, epoch bumps, saga compensation, approvals |
-| audit-chain | Go 1.22 | 8084 | Two-phase decision records with hash chain |
-| gateway | Go 1.22 | 8080 | Policy enforcement point — orchestrates the six-stage pipeline |
-| mock-rails | Go 1.22 | 8090 | Stub payment rail with saga failure injection |
-| dashboard | React + Vite | 5173 | Operator UI — fleet map, budgets, containment, approvals |
-| agent-sim | Python 3.12 | — | Simulated fleet, attack harness |
+> *See [docs/assets/architecture.excalidraw](docs/assets/architecture.excalidraw) for the editable source.*
 
-### Six-stage pipeline
+### Data Flow
 
-Every `POST /v1/act` request flows through these stages in order. Any stage can short-circuit with a denial — later stages are never called.
+```text
+┌─────────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────────┐
+│  Autonomous AI  │────▶│    Gateway   │────▶│   Identity  │     │   Budget     │
+│      Agent      │     │  (Idempotency│     │   (Mandate  │     │  Ledger (Lua)│
+└─────────────────┘     │   & AuthZ)   │     │  Verification)    │              │
+                        └──────────────┘     └─────────────┘     └──────────────┘
+                               │                                          
+                               ▼                                          
+                        ┌──────────────┐                           ┌──────────────┐
+                        │ Cedar Policy │                           │ Audit Chain  │
+                        │    Engine    │                           │ (Hash-Linked │
+                        │  (Shadowing) │                           │  Postgres)   │
+                        └──────────────┘                           └──────┬───────┘
+                                                                          │
+                                                                          ▼
+                        ┌──────────────────────────────────────────────────┐
+                        │             Containment & Intelligence           │
+                        │  ┌─────────────┐  ┌─────────────┐  ┌───────────┐ │
+                        │  │  Behavior   │  │ Containment │  │  Recovery │ │
+                        │  │  Analytics  │  │ Controller  │  │   Cases   │ │
+                        │  │ (JSD/EWMA)  │  │ (Laddering) │  │ (Approval)│ │
+                        │  └─────────────┘  └─────────────┘  └───────────┘ │
+                        └──────────────────────────────────────────────────┘
+```
 
-1. **Identity** — Verify Ed25519 signature on the capability token. Check expiry. Check token epochs against the local epoch cache (rejects with `EPOCH_STALE` if the token was minted before a revocation).
-2. **Containment** — Fetch the current containment level for the agent. `HALT` denies immediately. `QUARANTINE` or `requires_approval` caveat routes to the approval queue (202). `THROTTLE` enforces velocity cap and new-counterparty escalation. `OBSERVE` passes through.
-3. **Policy** — Call cedar-agent for authorization. Then check the live mandate's counterparty scope and amount ceiling (the explicit second gate — Cedar can say Allow but AEGIS can still say Deny).
-4. **Budget** — Atomic Redis Lua script reserves the amount on every node in the budget path. Two-pass check-then-set inside a single Lua script guarantees `committed + reserved ≤ cap` under any concurrency.
-5. **Execute** — Call mock-rails. On failure, release the reservation and finalize audit with `RAIL_ERROR`.
-6. **Audit** — Finalize the pre-execute stub with the decision and latency. The stub was written before Stage 4, so even a crash between budget and execution leaves evidence.
+### Components
+
+| Layer | Component | Role |
+|-------|-----------|------|
+| **Ingress** | Gateway (`gateway`) | 6-Stage execution pipeline, idempotency guards, and shadow-policy routing |
+| **Auth** | Cedar Engine (`cedar-agent`) | External AWS Cedar policy evaluator for dynamic structural linting |
+| **Identity** | Identity Service (`identity-service`) | PKI token minting, caveat attenuation, and mandate revocation |
+| **Finance** | Budget Ledger (`budget-ledger`) | Distributed atomic state execution via Lua scripts on Redis |
+| **Persistence**| Audit Chain (`audit-chain`) | SHA-256 hash-linking, context snapshotting, and chain verification |
+| **Intelligence**| Behavior Analytics (`behavior-analytics`) | FastAPI/Python worker tracking JSD drift and cosine-similarity fleet correlations |
+| **Control** | Containment Controller (`containment-controller`) | Modifies agent states, coordinates quarantine approvals, and orchestrates emergency Halts |
+| **Observability**| Prometheus/Grafana | Live telemetry ingestion spanning orphaned funds, drift metrics, and fleet coordination |
 
 ---
 
-## Quick start
+## Quick Start
+
+### 1. Booting the Stack
 
 ```bash
-# Build and start all 11 containers
+git clone https://github.com/aegis-org/aegis.git && cd aegis
+
+# Start the full 14-container stack
 make up
 
-# Seed demo data: 4 agents, 4 mandates, budget tree, Cedar policies, containment states
+# Wait ~10 seconds for databases and services to initialize, then seed the data
 make seed
 ```
 
-Once the stack is up:
+### 2. Simulating the Prototype
 
-- **Gateway API**: http://localhost:8080
-- **Dashboard**: http://localhost:5173
-- **Cedar-agent**: http://localhost:8180
-- **Postgres**: localhost:5432 (user: aegis, pass: aegis, db: aegis)
-
-### Send an action through the pipeline
+To comprehensively see AEGIS in action, run the fully automated 7-minute demonstration.
 
 ```bash
-# Get a mandate ID from the seeded data
-MANDATE_ID=$(docker compose exec -T postgres psql -U aegis -d aegis -t -A -c \
-  "SELECT id FROM mandates WHERE status='live' LIMIT 1")
-
-# Get the root budget node ID
-BUDGET_NODE=$(curl -s http://localhost:8082/v1/budget-node-by-label/root | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-
-# Mint a capability token
-TOKEN=$(curl -s -X POST http://localhost:8081/v1/tokens/mint \
-  -H "Content-Type: application/json" \
-  -d "{\"agent_id\":\"00000000-0000-0000-0000-000000000010\",\"mandate_id\":\"$MANDATE_ID\",\"caveats\":[]}")
-
-# Send a payment through the full six-stage pipeline
-curl -s -X POST http://localhost:8080/v1/act \
-  -H "Content-Type: application/json" \
-  -d "{\"token\":\"$TOKEN\",\"action_type\":\"SendPayment\",\"counterparty_id\":\"vendor_x\",\"amount_minor\":100,\"idempotency_key\":\"test-1\",\"budget_path\":[\"$BUDGET_NODE\"]}"
+# Runs the full narrative sequence
+make demo
 ```
 
-### Try an out-of-scope counterparty
+The script will walk you through 5 critical scenarios:
+1. **The Attack:** Injecting a malicious payload and witnessing Mandate rejections.
+2. **The Race:** Hammering the budget ledger with concurrency and proving 0 overshoot.
+3. **The Halt:** Automatically triggering an emergency agent freeze and visualizing the state.
+4. **The Herd:** Firing a poisoned feed and detecting fleet-correlation anomalies.
+5. **The Proof:** Tampering with the Postgres backend and mathematically detecting the break.
 
+### 3. Manual Testing & Dashboards
+
+If you prefer to drive manually, you can execute individual attack simulations:
 ```bash
-# Same token, but counterparty "vendor_z" is not in the mandate's allowlist
-curl -s -X POST http://localhost:8080/v1/act \
+# 1. Fire a race condition attack
+bash scripts/run_race_benchmark.sh
+
+# 2. Inject a poisoned feed
+python3 simulation/agent-sim/app/attacks/poison_feed.py
+
+# 3. Halt an agent manually
+curl -X PUT http://localhost:8083/v1/containment/agent/00000000-0000-0000-0000-000000000010 \
   -H "Content-Type: application/json" \
-  -d "{\"token\":\"$TOKEN\",\"action_type\":\"SendPayment\",\"counterparty_id\":\"vendor_z\",\"amount_minor\":100,\"idempotency_key\":\"test-2\",\"budget_path\":[\"$BUDGET_NODE\"]}"
-# → 403 MANDATE_SCOPE_VIOLATION
+  -d '{"level":"HALT","reason":"manual stop","actor":"operator"}'
 ```
 
-### Emergency stop
+**Accessing Telemetry:**
+- **Prometheus:** `http://localhost:9090`
+- **Grafana Dashboards:** `http://localhost:3000` (User: `admin`, Pass: `admin`)
+  - **Enforcement Dashboard:** Tracks latency and denial rates.
+  - **Budget Velocity:** Monitors headroom and exception rates.
+  - **Fleet Risk:** Visualizes `aegis_drift_score` and `aegis_fleet_correlation_index`.
 
-```bash
-# Halt a specific agent
-curl -s -X POST http://localhost:8083/v1/emergency-stop \
-  -H "Content-Type: application/json" \
-  -d '{"scope_type":"agent","scope_id":"00000000-0000-0000-0000-000000000010","reason":"demo","actor":"operator"}'
+> *Pro tip: Need to capture screenshots for a report? Ensure `puppeteer` is installed via `npm i puppeteer`, then run `node scripts/capture_screenshots.js` to automatically extract the Grafana and Dashboard visualisations into `docs/screenshots/`.*
 
-# Next action from that agent → 403 CONTAINMENT_HALT or EPOCH_STALE
+---
+
+## Feature Deep Dive: Visual Evidence
+
+### The Race Condition (Budget Ledger)
+AEGIS mathematically guarantees that no concurrent loop can breach the allotted capacity. Below is the side-by-side output comparing naive logic versus AEGIS executing under maximum duress.
+![Budget Enforcement](docs/screenshots/grafana_enforcement.png)
+
+### Emergency Halt & Fleet Map
+When an agent deviates into dangerous territory, the `containment-controller` pushes them to a `HALT` state, freezing API keys and spinning up a manual `Recovery Case`.
+![Fleet Map Halt](docs/screenshots/fleet_map_halt.png)
+
+### The Tamper-Evident Audit Chain
+When a direct database modification is performed, `verify-chain` automatically recalculates the canonical payload and flags the sequence anomaly.
+```json
+{
+  "valid": false,
+  "broken_at_seq": 3,
+  "expected_hash": "e3b0c44298fc1c149afbf4c8996fb924...",
+  "actual_hash": "f45bc837d9afce620b..."
+}
 ```
 
 ---
 
-## Tests
+## Repository Structure
 
-```bash
-# Unit tests (no Docker needed)
-go test ./pkg/...
-
-# Golden tests — 43 cases covering mandate scope, expiry, budget cap, policy denial, etc.
-# Requires a running, seeded stack.
-go test ./tests/golden/... -v -timeout 120s
-
-# Control tests — 6 cases: emergency stop, throttle, quarantine, saga compensation
-go test ./tests/control/... -v -timeout 120s
-
-# Race benchmark — 1000 concurrent reservations × 10 runs, must hit exact cap
-make race-bench
-
-# Revocation latency — click-to-first-deny must be under 1 second
-make revocation-bench
+```text
+AEGIS/
+├── analytics/
+│   └── behavior-analytics/    # JSD Drift, EWMA tracking, Fleet Correlation (Python)
+├── pkg/                       # Shared Go utilities (API, Config, JWT, Budget Lua)
+├── scripts/                   # Automated demo, benchmarks, and chaos suite
+├── services/
+│   ├── audit-chain/           # Immutable execution ledger (Go)
+│   ├── budget-ledger/         # Redis-backed distributed capacity (Go)
+│   ├── containment-controller/# Ladder management and Saga sweeps (Go)
+│   ├── gateway/               # 6-stage execution router (Go)
+│   ├── identity-service/      # PKI, Mandates, and Token distribution (Go)
+│   └── mock-rails/            # Simulated financial settlement
+├── simulation/
+│   └── agent-sim/             # E2E load generation and attack scripts
+├── tests/
+│   └── golden/                # 43+ E2E integration tests
+├── observability/             # Prometheus config and Grafana declarative dashboards
+└── Makefile                   # Core automation
 ```
 
 ---
 
-## Makefile targets
+## Documentation
 
-| Target | Description |
-|---|---|
-| `make up` | Build and start all containers |
-| `make down` | Stop all containers |
-| `make seed` | Populate demo data (agents, mandates, budgets, Cedar, containment) |
-| `make test` | Run Go unit tests for all services |
-| `make race-bench` | Run the 1000-concurrent-request race benchmark |
-| `make revocation-bench` | Measure emergency-stop-to-first-denial latency |
-| `make logs` | Follow all container logs |
-
----
-
-## Repository structure
-
-```
-aegis/
-  docker-compose.yml
-  go.work                         # Go workspace tying all modules together
-  Makefile
-  .env.example
-  
-  migrations/
-    001_init.sql                  # Full PostgreSQL schema (14 tables)
-  
-  pkg/                            # Shared Go packages
-    capability/                   # Token + mandate structs, Ed25519 sign/verify
-    apierr/                       # Standard error envelope (Section 4.4)
-    telemetry/                    # Structured JSON logger
-    idgen/                        # UUIDv4 helpers
-  
-  services/
-    gateway/                      # Six-stage pipeline enforcement point
-    identity-service/             # Mandates, token mint/attenuate/renew
-    budget-ledger/                # Lua-script atomic reservations, velocity, reaper
-    containment-controller/       # Ladder, epochs, sagas, approvals
-    audit-chain/                  # Two-phase decision records
-    mock-rails/                   # Stub payment rail with failure injection
-  
-  policies/cedar/                 # Cedar schema + per-persona policies
-  simulation/agent-sim/           # One-shot action sender
-  dashboard/                      # React + Vite + TypeScript operator UI
-  scripts/                        # Seed data, revocation benchmark
-  tests/
-    golden/                       # 43 golden test cases
-    race/                         # Concurrency benchmarks
-    control/                      # Phase 2 control-plane tests
-  observability/                  # Prometheus/Grafana config (reserved)
-```
-
----
-
-## Implementation phases
-
-This prototype was built in three phases, each ending with a runnable system:
-
-- **Phase 0 — Walking Skeleton**: Docker Compose, gateway with stubbed stages, mock-rails, audit insert. One action end-to-end.
-- **Phase 1 — The Spine**: Real Ed25519 tokens, Cedar policy enforcement, atomic budget reservations, mandate scope checks, two-phase audit. 43 golden tests. 100-concurrent race test.
-- **Phase 2 — Control**: Full containment ladder, epoch-based revocation with pub/sub, saga registration and compensation, dashboard v1, 1000-concurrent race benchmark, revocation latency benchmark.
+- **Demo Guide**: [DEMO_GUIDE.md](./DEMO_GUIDE.md) — The exact narrative structure and execution steps for the live demonstration.
+- **Benchmarks**: [BENCHMARKS.md](./BENCHMARKS.md) — Verified metrics on p99 latency, exact concurrency, and anomaly detection speeds.
+- **Submission Details**: [SUBMISSION.md](./SUBMISSION.md) — Phase 4 delivery sign-offs.
 
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE)

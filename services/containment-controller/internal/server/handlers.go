@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -42,7 +43,10 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("GET /v1/approvals/{id}", h.HandleGetApproval)
 	mux.HandleFunc("POST /v1/approvals", h.HandleCreateApproval)
 	mux.HandleFunc("POST /v1/approvals/{id}/decide", h.HandleDecideApproval)
+	mux.HandleFunc("GET /v1/containment/recovery-cases/{id}", h.HandleGetRecoveryCase)
+	mux.HandleFunc("POST /v1/containment/recovery-cases/{id}/approve", h.HandleApproveRecoveryCase)
 	mux.HandleFunc("GET /healthz", h.HandleHealthz)
+	mux.HandleFunc("GET /metrics", h.HandleMetrics)
 	return mux
 }
 
@@ -315,6 +319,62 @@ func (h *Handler) HandleDecideApproval(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ar)
 }
 
+func (h *Handler) HandleGetRecoveryCase(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	rc, err := h.store.GetRecoveryCase(ctx, id)
+	if err != nil {
+		apierr.WriteError(w, http.StatusNotFound, "CONTAINMENT_HALT", "recovery case not found")
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(rc)
+}
+
+func (h *Handler) HandleApproveRecoveryCase(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req struct {
+		Approver string `json:"approver"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierr.WriteError(w, http.StatusBadRequest, "CONTAINMENT_HALT", "invalid JSON")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	rc, err := h.store.GetRecoveryCase(ctx, id)
+	if err != nil {
+		apierr.WriteError(w, http.StatusNotFound, "CONTAINMENT_HALT", "recovery case not found")
+		return
+	}
+	
+	if rc.Status == "APPROVED" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(rc)
+		return
+	}
+	
+	if rc.Approver1 == nil {
+		_ = h.store.UpdateRecoveryCaseApprover1(ctx, id, req.Approver)
+	} else if *rc.Approver1 != req.Approver && rc.Approver2 == nil {
+		_ = h.store.UpdateRecoveryCaseApprover2(ctx, id, req.Approver)
+		
+		_, _ = h.ladder.Resume(ctx, "agent", rc.AgentID, "recovery-case-approval")
+	} else if *rc.Approver1 == req.Approver {
+		apierr.WriteError(w, http.StatusBadRequest, "CONTAINMENT_HALT", "approver 1 cannot also be approver 2")
+		return
+	}
+	
+	rc, _ = h.store.GetRecoveryCase(ctx, id)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(rc)
+}
+
 func (h *Handler) HandleHealthz(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
@@ -328,4 +388,11 @@ func (h *Handler) HandleHealthz(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func (h *Handler) HandleMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+	w.Write([]byte("# HELP aegis_orphaned_funds_minor Orphaned funds swept\n"))
+	w.Write([]byte("# TYPE aegis_orphaned_funds_minor gauge\n"))
+	w.Write([]byte(fmt.Sprintf("aegis_orphaned_funds_minor %d\n", h.ladder.GetOrphanedFunds())))
 }

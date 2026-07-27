@@ -1,4 +1,4 @@
-.PHONY: up down seed test logs race-bench revocation-bench
+.PHONY: up down seed test logs race-bench revocation-bench demo chaos reset archive
 
 up:
 	docker compose up -d --build
@@ -26,3 +26,17 @@ revocation-bench:
 
 logs:
 	docker compose logs -f
+
+demo:
+	bash scripts/demo.sh
+
+chaos:
+	bash scripts/chaos.sh
+
+reset:
+	docker compose down -v
+	docker compose rm -f
+
+archive:
+	make reset
+	zip -r aegis-submission.zip . -x "*.git*" "*node_modules*" "*__pycache__*" "*.env" "*.zip"
